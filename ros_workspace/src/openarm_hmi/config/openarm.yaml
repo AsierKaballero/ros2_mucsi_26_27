@@ -18,7 +18,7 @@ servidor:
   frecuencia_estado_hz: 15
 
 # Carpeta de datos persistentes (capturas de cámara y poses guardadas). Por defecto dentro
-# de la carpeta del paquete (ignorada por git en su .gitignore); ~/ros_workspace está
+# de la carpeta del paquete (se sube a git: poses y capturas se comparten); ~/ros_workspace está
 # montado en el anfitrión, así que sobrevive a reconstruir el contenedor y las capturas se
 # ven también desde fuera en ros_workspace/src/openarm_hmi/datos/capturas.
 datos:
@@ -120,7 +120,7 @@ seguridad:
 
 camaras:
   fps_maximo: 15
-  calidad_jpeg: 80
+  calidad_jpeg: 90
   calidad_captura: 95
   # Segundos sin peticiones antes de cancelar la suscripción a una cámara
   inactividad_s: 10
@@ -187,3 +187,21 @@ scripts:
     parametros:
       - {nombre: brazos, etiqueta: Brazo, tipo: brazos, defecto: ambos}
       - {nombre: anchura, etiqueta: "Anchura (mm)", tipo: numero, defecto: 60, min: 0, max: 146}
+  # Scripts de test_ws (ros_workspace/src/test_ws/test_ws). Ruta absoluta: el comando no pasa
+  # por una shell, así que ~ no se expande. Guardan su registro en
+  # ros_workspace/registros_openarm/ (ver docs_and_extras/OPENARM_PUESTA_EN_MARCHA.md)
+  - id: alternar_brazos
+    nombre: Alternar brazos
+    descripcion: >-
+      Sube y baja el codo (joint4) de los dos brazos alternándolos hasta que cada uno ha
+      subido el número de ciclos indicado. "Pausa entre brazos": desde que uno empieza a
+      bajar hasta que el otro empieza a subir; 0 = a la vez, negativa = el otro sube antes
+      (los dos arriba un rato; mínimo −tiempo arriba/2). Al final, o al pulsar Detener,
+      vuelven a la posición de partida. Registro en registros_openarm/<fecha>_<cuerpo>_alternar/.
+    comando: [python3, /home/laboratorio/ros_workspace/src/test_ws/test_ws/alternar_brazos.py, --cuerpo, "{cuerpo}", --ciclos, "{ciclos}", --angulo, "{angulo}", --velocidad, "{velocidad_alternar}", --espera, "{espera}", --pausa, "{pausa}"]
+    parametros:
+      - {nombre: ciclos, etiqueta: "Ciclos (subidas de cada brazo)", tipo: numero, defecto: 5, min: 1, max: 20}
+      - {nombre: angulo, etiqueta: "Codo arriba (rad)", tipo: numero, defecto: 1.5, min: 0.2, max: 2.0}
+      - {nombre: velocidad_alternar, etiqueta: "Velocidad (fracción)", tipo: numero, defecto: 0.3, min: 0.05, max: 0.6}
+      - {nombre: espera, etiqueta: "Tiempo arriba (s)", tipo: numero, defecto: 0.5, min: 0, max: 5}
+      - {nombre: pausa, etiqueta: "Pausa entre brazos (s, puede ser negativa)", tipo: numero, defecto: 0, min: -2.5, max: 5}
