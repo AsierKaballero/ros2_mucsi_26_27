@@ -189,7 +189,7 @@ scripts:
       - {nombre: anchura, etiqueta: "Anchura (mm)", tipo: numero, defecto: 60, min: 0, max: 146}
   # Scripts de test_ws (ros_workspace/src/test_ws/test_ws). Ruta absoluta: el comando no pasa
   # por una shell, así que ~ no se expande. Guardan su registro en
-  # ros_workspace/registros_openarm/ (ver docs_and_extras/OPENARM_PUESTA_EN_MARCHA.md)
+  # ros_workspace/registros_openarm/.
   - id: alternar_brazos
     nombre: Alternar brazos
     descripcion: >-

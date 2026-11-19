@@ -10,8 +10,7 @@ Cada cámara publica en /robot_<cuerpo>_<lado>/camara/image_raw, con el frame de
 index0). Deja un dispositivo vacío ("") para no lanzar esa cámara. Necesita un perfil con
 acceso a /dev (local o local_gpu).
 
-Por defecto, las cámaras Arducam B0495 del cuerpo 301 (identificadas en
-docs_and_extras/OPENARM_PUESTA_EN_MARCHA.md, 4.21): la derecha por número de serie y la izquierda por puerto
+Por defecto, las cámaras Arducam B0495 del cuerpo 301: la derecha por número de serie y la izquierda por puerto
 USB (si se cambia de puerto, hay que pasar su nueva ruta). La izquierda está en un puerto
 USB 2 y solo da 960x600 a 10 fps; la derecha (USB 3) da 1920x1200 hasta 50 fps.
 
