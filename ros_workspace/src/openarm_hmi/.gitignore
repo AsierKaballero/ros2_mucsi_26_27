@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# Capturas de cámara y poses guardadas desde el HMI
+datos/
