@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenArm HMI</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f59e0b'/%3E%3Cpath d='M8 24 L14 14 L20 18 L25 8' stroke='%23111' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/hmi.css">
+  <!-- Librerías locales (web/vendor): el HMI funciona sin conexión a Internet -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three/three.module.js",
+        "three/examples/jsm/": "/vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header id="barra" class="barra"></header>
+    <div id="aviso-parada" class="aviso-parada" hidden></div>
+    <nav id="navegacion" class="navegacion" aria-label="Vistas"></nav>
+    <main id="vista" class="vista"></main>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="modal-raiz"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
