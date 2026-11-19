@@ -1,0 +1,15 @@
+# Publica el puerto del HMI (8080) en el perfil `desktop`, que no usa la red del anfitrión.
+# Solo hace falta con `desktop`; con `local`/`local_gpu` (network_mode: host) el HMI ya es
+# accesible en http://localhost:8080.
+#
+# Uso, desde la raíz del repositorio (recrea el contenedor; ros_workspace se conserva):
+#   docker compose -f docker-compose.yml \
+#     -f ros_workspace/src/openarm_hmi/docker/docker-compose.hmi.yml up -d desktop
+# y dentro del contenedor lanza el HMI escuchando en todas las interfaces:
+#   ros2 launch openarm_hmi hmi_sim.launch.py host:=0.0.0.0
+#
+# Se publica solo en 127.0.0.1 del anfitrión: el HMI no tiene autenticación.
+services:
+  desktop:
+    ports:
+      - "127.0.0.1:8080:8080"

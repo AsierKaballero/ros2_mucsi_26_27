@@ -1,0 +1,189 @@
+# Configuración del HMI web del OpenArm.
+#
+# Las cadenas admiten plantillas que se sustituyen al cargar:
+#   {cuerpo}  identificador del cuerpo (301, 302)       -> parámetro `cuerpo` del nodo
+#   {brazo}   identificador del brazo  (301_izq...)     -> solo en los campos por brazo
+#   {sufijo}  izq / der
+#   {nombre}  nombre legible del brazo
+# Para añadir funcionalidad suele bastar con tocar este fichero (poses, cámaras, perfiles
+# de arranque, scripts, objetos de la escena) sin cambiar código.
+
+servidor:
+  # 127.0.0.1: solo accesible desde el propio equipo (recomendado). Usa 0.0.0.0 para
+  # aceptar conexiones de la red (p. ej. dentro del contenedor `desktop` con el puerto
+  # publicado; ver README). El HMI no tiene autenticación: cualquiera que lo alcance
+  # puede mover el robot.
+  host: 127.0.0.1
+  puerto: 8080
+  frecuencia_estado_hz: 15
+
+# Carpeta de datos persistentes (capturas de cámara y poses guardadas). Por defecto dentro
+# de la carpeta del paquete (ignorada por git en su .gitignore); ~/ros_workspace está
+# montado en el anfitrión, así que sobrevive a reconstruir el contenedor y las capturas se
+# ven también desde fuera en ros_workspace/src/openarm_hmi/datos/capturas.
+datos:
+  directorio: ~/ros_workspace/src/openarm_hmi/datos
+
+# Módulos activos del servidor, en orden de arranque. Cada uno añade sus rutas /api/...
+# y su parte del estado; la interfaz web oculta las vistas cuyos módulos falten.
+modulos:
+  - estado
+  - registro
+  - seguridad
+  - controladores
+  - movimiento
+  - pinza
+  - poses
+  - camaras
+  - ros
+  - sistema
+  - scripts
+
+robot:
+  cuerpo: "301"
+  nombre: "OpenArm {cuerpo}"
+  marco_referencia: world
+  gestor_controladores: /controller_manager
+  nodo_move_group: move_group
+  # Grupo de MoveIt que contiene los dos brazos (movimientos sincronizados)
+  grupo_conjunto: "robots_{cuerpo}"
+  brazos:
+    - sufijo: izq
+      nombre: Brazo izquierdo
+    - sufijo: der
+      nombre: Brazo derecho
+  # Campos por brazo ({brazo} = "{cuerpo}_{sufijo}")
+  por_brazo:
+    articulaciones:
+      - "{brazo}_joint1"
+      - "{brazo}_joint2"
+      - "{brazo}_joint3"
+      - "{brazo}_joint4"
+      - "{brazo}_joint5"
+      - "{brazo}_joint6"
+      - "{brazo}_joint7"
+    grupo_moveit: "robot_{brazo}"
+    efector: "{brazo}_grasp_frame"
+    controlador_trayectoria: "robot_{brazo}_joint_trajectory_controller"
+    controlador_pinza: "robot_{brazo}_gripper_controller"
+    pinza:
+      # Acción GripperCommand en milímetros (nodo pinza_openarm_node del lanzador)
+      accion: "/robot_{brazo}/gripper_action"
+      articulacion: "{brazo}_finger_joint1"
+      anchura_maxima_mm: 146.2
+      rad_abierta: 0.7854
+      esfuerzo: 10.0
+
+movimiento:
+  velocidad_defecto: 0.10       # Fracción de la velocidad máxima de cada articulación
+  velocidad_maxima: 1.00        # Tope del deslizante (baja a 0.3 con el robot real si quieres)
+  aceleracion_relativa: 1.0     # Escala de aceleración = velocidad · este valor
+  tiempo_planificacion: 5.0
+  intentos_planificacion: 5
+  tolerancia_articular: 0.001
+  # Margen respecto a los límites del URDF al validar objetivos articulares (rad)
+  margen_limites: 0.0
+  # Pasos que ofrece la interfaz para el movimiento por pasos (jog)
+  pasos_articulares_grados: [0.5, 1, 5, 10, 20]
+  pasos_cartesianos_mm: [1, 5, 10, 25, 50]
+  pasos_rotacion_grados: [1, 5, 10, 20]
+  # Trayectorias cartesianas: fracción mínima alcanzable para ejecutarlas
+  fraccion_cartesiana_minima: 0.95
+
+# Objetos de colisión añadidos a la escena de MoveIt al detectar move_group (cajas, en el
+# marco de referencia del robot). Ejemplo de mesa:
+#   - {id: mesa, tamano: [1.2, 0.8, 0.05], posicion: [0.5, 0.0, 0.0]}
+escena: []
+
+# Poses predefinidas (solo lectura). `articulaciones` vale para los dos brazos; usa
+# `por_brazo: {izq: [...], der: [...]}` si son distintas. Las poses que se guardan desde
+# la interfaz van a <datos>/poses.yaml.
+poses_predefinidas:
+  - nombre: home
+    descripcion: Todas las articulaciones a cero (brazos extendidos; posición de arranque del robot real)
+    articulaciones: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  - nombre: hands_up
+    descripcion: Codo flexionado (pose inicial de los ejemplos; lejos de la singularidad)
+    articulaciones: [0.0, 0.0, 0.0, 1.5, 0.0, 0.0, 0.0]
+
+seguridad:
+  # Al pulsar la parada de emergencia: se cancelan los objetivos, se ordena a los
+  # controladores mantener la posición actual, se paran los scripts y, si esto es true,
+  # se desactivan los controladores de brazo y pinza (no aceptan órdenes de nadie hasta
+  # el rearme). Es una parada por SOFTWARE: no sustituye al corte de alimentación.
+  desactivar_controladores: true
+  detener_scripts: true
+  # Tecla de la interfaz que dispara la parada ("" para ninguna)
+  tecla_parada: Escape
+  # Topic (std_msgs/Bool, latched) con el estado de la parada para otros nodos
+  topic_estado: /hmi/parada_emergencia
+
+camaras:
+  fps_maximo: 15
+  calidad_jpeg: 80
+  calidad_captura: 95
+  # Segundos sin peticiones antes de cancelar la suscripción a una cámara
+  inactividad_s: 10
+  # Una cámara por brazo (en el efector final). launch/camaras.launch.py y la cámara
+  # simulada publican en estos topics. Admite sensor_msgs/Image y CompressedImage.
+  por_brazo:
+    id: "{brazo}"
+    nombre: "Cámara {nombre}"
+    topic: "/robot_{brazo}/camara/image_raw"
+  # Cámaras adicionales (escena, cenital...):
+  #   - {id: escena, nombre: Cámara de escena, topic: /camara_escena/image_raw}
+  adicionales: []
+
+# Perfiles del botón Iniciar/Detener del sistema. Se lanzan como procesos hijos del HMI
+# (solo estos comandos: la interfaz no puede ejecutar comandos arbitrarios).
+sistema:
+  tiempo_parada_s: 15
+  perfiles:
+    - id: sim
+      nombre: "Simulación {cuerpo}"
+      descripcion: Hardware simulado (mock) de ros2_control con MoveIt, sin RViz
+      comando: [ros2, launch, launcher_robots_lab_robotica, "sim_{cuerpo}.launch.py", "launch_rviz:=false"]
+    - id: sim_rviz
+      nombre: "Simulación {cuerpo} + RViz"
+      descripcion: Igual que la simulación, abriendo RViz
+      comando: [ros2, launch, launcher_robots_lab_robotica, "sim_{cuerpo}.launch.py"]
+    - id: real
+      nombre: "Robot real {cuerpo}"
+      descripcion: OpenArm real por CAN (antes, ./launcher.sh can {cuerpo} en el anfitrión)
+      confirmar: "Al arrancar, los dos brazos van a la posición cero. ¿Hay espacio libre alrededor y el corte de alimentación a mano?"
+      comando: [ros2, launch, launcher_robots_lab_robotica, "robot_{cuerpo}.launch.py", "launch_rviz:=false"]
+    - id: camaras_sim
+      nombre: Cámaras simuladas
+      descripcion: Publica una imagen sintética en el topic de cada cámara de brazo
+      comando: [ros2, launch, openarm_hmi, camaras_simuladas.launch.py, "cuerpo:={cuerpo}"]
+      paralelo: true
+
+# Scripts ejecutables desde la vista Procesos. Tipos de parámetro: brazo, brazos (admite
+# "ambos"), numero (min, max), opcion (opciones), texto (solo [A-Za-z0-9_.-]).
+# Variables disponibles en el comando: {cuerpo}, {velocidad} y {<nombre de parámetro>}.
+scripts:
+  - id: prueba_movimiento
+    nombre: Prueba de movimiento
+    descripcion: >-
+      Gira joint1 del brazo el ángulo indicado, lo devuelve a su sitio y abre y cierra la
+      pinza (equivalente a ejemplos/prueba_openarm.py).
+    comando: [ros2, run, openarm_hmi, prueba_movimiento, --brazos, "{brazos}", --angulo, "{angulo}", --velocidad, "{velocidad}", --modo, basica]
+    parametros:
+      - {nombre: brazos, etiqueta: Brazo, tipo: brazos, defecto: "{cuerpo}_izq"}
+      - {nombre: angulo, etiqueta: "Ángulo (rad)", tipo: numero, defecto: 0.05, min: -0.5, max: 0.5}
+  - id: prueba_articulaciones
+    nombre: Recorrido articular
+    descripcion: >-
+      Mueve cada articulación (joint1-joint7) ± el ángulo indicado y vuelve. Útil para
+      comprobar todos los motores y su sentido de giro en la puesta en marcha.
+    comando: [ros2, run, openarm_hmi, prueba_movimiento, --brazos, "{brazos}", --angulo, "{angulo}", --velocidad, "{velocidad}", --modo, articulaciones]
+    parametros:
+      - {nombre: brazos, etiqueta: Brazo, tipo: brazos, defecto: "{cuerpo}_izq"}
+      - {nombre: angulo, etiqueta: "Ángulo (rad)", tipo: numero, defecto: 0.1, min: 0.01, max: 0.5}
+  - id: prueba_pinzas
+    nombre: Prueba de pinzas
+    descripcion: Abre las pinzas a la anchura indicada y las cierra.
+    comando: [ros2, run, openarm_hmi, prueba_movimiento, --brazos, "{brazos}", --anchura, "{anchura}", --modo, pinza]
+    parametros:
+      - {nombre: brazos, etiqueta: Brazo, tipo: brazos, defecto: ambos}
+      - {nombre: anchura, etiqueta: "Anchura (mm)", tipo: numero, defecto: 60, min: 0, max: 146}
